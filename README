@@ -1,0 +1,2 @@
+docker build -t judge-cpp docker/cpp
+docker build -t judge-python docker/python
