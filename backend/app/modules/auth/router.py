@@ -5,10 +5,12 @@ from fastapi.responses import JSONResponse
 from app.core.deps import get_db, get_current_user
 from app.core.crud import get_user_by_username, get_user_by_email
 from .models import Users, UserRole
-from .schemas import UserPublicSchema, UserSignupSchema, UserLoginSchema
+from .schemas import UserPublicSchema, UserSignupSchema, UserLoginSchema, UserLeaderBoard
 from app.core.security import get_password, create_access_token, verify_password
 from app.core.crud import create_user
 from app.core.exceptions import APIException
+from sqlalchemy import select
+
 from datetime import timedelta
 
 router = APIRouter(prefix="/users")
@@ -87,3 +89,33 @@ async def login(user: UserLoginSchema, db: AsyncSession = Depends(get_db)):
         samesite="lax",
     )
     return response
+
+@router.get("/leaderboard")
+async def leaderboard(db: AsyncSession = Depends(get_db)):
+    
+    limit = 10
+    query = select(Users).order_by(Users.point).limit(limit)
+    exc = await db.execute(query)
+    
+    top_users = []
+    results = exc.scalars().all()
+    if results:
+        top_users = [UserLeaderBoard.model_validate(d) for d in results]
+    
+    return {
+        "success": True,
+        "leaderboard": top_users,
+        "limit": limit
+    }
+
+@router.post("/logout")
+async def logout():
+    res = JSONResponse({"success": True})
+    res.delete_cookie(
+        key="access_token",
+        httponly=True,
+        path="/",
+        secure=False,
+        samesite="lax",
+    )
+    return res
