@@ -51,10 +51,9 @@ async def get_user_by_email(*, email: str, db: AsyncSession) -> UserSignupSchema
         >>> user = await get_user_by_email(email="dinhlam@example.com", db=db)
     """
     result = await db.execute(text("""
-                                select u.*, w.id as wid, w.balance as balance, w.promotion as promotion
-                                from users u join wallets w
-                                on u.id = w.user_id
-                                where u.email = :email;
+                                select *
+                                from users
+                                where email = :email;
                                 """),
                             params={'email':email})
     return result.first()
