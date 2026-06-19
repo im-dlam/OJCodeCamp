@@ -54,7 +54,7 @@ class SubmissionCreateSchema(BaseModel):
             "example": {
                 "problem_id": 1,
                 "code": "a, b = map(int, input().split())\nprint(a + b)",
-                "language": "Python"
+                "language": "python"
             }
         }
 
@@ -92,6 +92,7 @@ class SubmissionResultSchema(BaseModel):
     submission_id: int
     test_case_id: int
     result: str
+    input_text: Optional[str] = None
     output_text: Optional[str] = None
     expected_output: Optional[str] = None
     error_message: Optional[str] = None
