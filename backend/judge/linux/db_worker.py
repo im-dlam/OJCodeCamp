@@ -9,7 +9,7 @@ from app.core.db import AsyncSessionLocal
 from app.core.redis import redis_client
 
 from app.modules.auth.models import UserProblemStats, UserProblemStatus
-from app.modules.problems.models import Problems  
+from app.modules.problems.models import Problems  , ProblemStats
 
 BATCH_SIZE = 500
 SLEEP_TIME = 0.1
@@ -180,7 +180,27 @@ async def bulk_update(rows: list):
 
             # upset user 
             stats_map = {}
+            problem_stats_map = {}
+            # update stats problem
+            
             for row in rows:
+                # update stats problem
+                
+                pid = row["prob_id"]
+
+                if pid not in problem_stats_map:
+                    problem_stats_map[pid] = {
+                        "problem_id": pid,
+                        "attempts": 1,
+                        "accepted": 1 if row["final_status"] == "ACCEPTED" else 0,
+                    }
+                else:
+                    problem_stats_map[pid]["attempts"] += 1
+
+                    if row["final_status"] == "ACCEPTED":
+                        problem_stats_map[pid]["accepted"] += 1
+                # end
+                
                 key = (row["user_id"], row["prob_id"])
                 accepted = (row["final_status"] == "ACCEPTED")
 
@@ -223,6 +243,32 @@ async def bulk_update(rows: list):
             )
 
             await session.execute(stmt)
+            
+            if problem_stats_map:
+                # execute stats problem
+                problem_rows = list(problem_stats_map.values())
+
+                problem_rows.sort(key=lambda x: x["problem_id"])
+
+                problem_stmt = pg_insert(ProblemStats).values(problem_rows)
+
+                problem_stmt = problem_stmt.on_conflict_do_update(
+                    index_elements=["problem_id"],
+                    set_={
+                        "attempts":
+                            ProblemStats.attempts +
+                            problem_stmt.excluded.attempts,
+
+                        "accepted":
+                            ProblemStats.accepted +
+                            problem_stmt.excluded.accepted,
+
+                        "updated_at":
+                            func.now(),
+                    }
+                )
+
+                await session.execute(problem_stmt)
             
             await session.commit()
             print(f"[DB] Updated {len(rows)} submissions & Distributed Points.")

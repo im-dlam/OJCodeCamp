@@ -6,7 +6,7 @@ from app.core.exceptions import APIException
 from app.modules.submissions.models import Submissions
 from app.modules.submissions.schemas import SubmissionStatusSchema
 from app.authorization.TLConfig import TL
-from .models import Problems, ProblemExamples, ProblemConstraints, ProblemTags, TestCases
+from .models import Problems, ProblemExamples, ProblemConstraints, ProblemTags, TestCases, ProblemStats
 from app.modules.problems.schemas import ProblemListSchema, ProblemDetailSchema, ProblemCreateSchema, ProblemUpdateSchema
 
 router = APIRouter(prefix="/problems", tags=["Problems"])
@@ -22,15 +22,15 @@ async def get_problems(
     db: AsyncSession = Depends(get_db),
 ):
     """Lấy danh sách bài toán"""
-    
+    # feature: giải mã cookie token để xác định user hiện tại
     user = None
     access_token = request.cookies.get("access_token")
     if access_token:
         try:
             user = TL.verify(access_token)
-            # user = await get_current_user(request, db)
         except Exception:
             pass 
+
     try:
         filters = []
         if difficulty:
@@ -38,10 +38,12 @@ async def get_problems(
         if category:
             filters.append(Problems.category == category)
 
+        # feature: tính tổng record dựa trên filter phục vụ metadata phân trang
         total = await db.scalar(
             select(func.count(Problems.id)).where(*filters)
         )
 
+        # feature: expression kiểm tra user đã AC (Accepted) bài này chưa
         if user:
             is_solved_expr = (
                 select(1)
@@ -55,8 +57,10 @@ async def get_problems(
         else:
             is_solved_expr = literal(False).label("is_solved")
 
+        # feature: truy vấn gộp thông tin Problems, ProblemStats (để tính rate) và trạng thái is_solved
         query = (
-            select(Problems, is_solved_expr)
+            select(Problems, ProblemStats.accepted, ProblemStats.attempts, is_solved_expr)
+            .outerjoin(ProblemStats, ProblemStats.problem_id == Problems.id)
             .where(*filters)
             .order_by(desc(Problems.created_at))
             .offset(skip)
@@ -64,12 +68,17 @@ async def get_problems(
         )
         
         result = await db.execute(query)
-        
         rows = result.all()
 
         data_response = []
-        for problem_obj, is_solved in rows:
+        for problem_obj, accepted, attempts, is_solved in rows:
+            # feature: tính tỷ lệ pass bài
+            accepted = accepted or 0
+            attempts = attempts or 0
+            acceptance_rate = round(accepted * 100 / attempts, 2) if attempts > 0 else 0
+
             prob_dict = ProblemListSchema.model_validate(problem_obj).model_dump()
+            prob_dict["acceptance_rate"] = acceptance_rate
             prob_dict["is_solved"] = is_solved
             data_response.append(prob_dict)
 
