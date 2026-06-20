@@ -1,89 +1,258 @@
+/* file: Navbar.css */
+
 .navbar-container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 60px;
-  background-color: #282828;
-  border-bottom: 1px solid #333;
-  padding: 0 40px;
+  height: 64px;
+  background-color: rgba(26, 26, 26, 0.85); 
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid #333333;
+  padding: 0 32px;
   position: sticky;
   top: 0;
   z-index: 50;
 }
 
-.nav-left { display: flex; align-items: center; gap: 32px; }
+.nav-left { 
+  display: flex; 
+  align-items: center; 
+  gap: 40px; 
+}
 
 .nav-logo {
-  color: #f39e00;
-  font-size: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  font-size: 18px;
   font-weight: 700;
   text-decoration: none;
-  letter-spacing: 1px;
+  letter-spacing: -0.5px;
 }
-.nav-logo span { color: #059669; } 
 
-.nav-links { display: flex; gap: 24px; }
+.logo-icon { color: #10b981; }
+.logo-accent { color: #10b981; } 
+
+.nav-links { 
+  display: flex; 
+  gap: 8px; 
+}
+
 .nav-item {
-  color: #9ca3af;
+  position: relative;
+  color: #a1a1aa;
   text-decoration: none;
-  font-size: 15px;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover { 
+  color: #ffffff; 
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.nav-item.active { 
+  color: #ffffff; 
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-right { 
+  display: flex; 
+  align-items: center; 
+}
+
+.auth-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav-btn-login {
+  color: #a1a1aa;
+  text-decoration: none;
+  font-size: 14px;
   font-weight: 500;
   transition: color 0.2s;
 }
-.nav-item:hover, .nav-item.active { color: #fff; }
 
-.nav-right { display: flex; align-items: center; gap: 16px; }
-
-.nav-btn-login {
-  color: #d1d5db;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-}
-.nav-btn-login:hover { color: #fff; }
+.nav-btn-login:hover { color: #ffffff; }
 
 .nav-btn-signup {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
   text-decoration: none;
-  padding: 8px 16px;
+  padding: 8px 18px;
   border-radius: 999px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.2);
+}
+
+.nav-btn-signup:hover { 
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* ================== USER MENU & DROPDOWN ================== */
+.user-menu { 
+  display: flex; 
+  align-items: center; 
+  gap: 16px; 
+  position: relative;
+}
+
+.user-point {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ea580c; /* Màu cam cháy */
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  background-color: transparent;
+  padding: 4px 8px;
+  border-radius: 6px;
   transition: background-color 0.2s;
 }
-.nav-btn-signup:hover { background-color: rgba(255, 255, 255, 0.2); }
 
-/* User Profile Menu */
-.user-menu { display: flex; align-items: center; gap: 16px; }
-.user-point {
-  color: #fbbf24;
-  font-family: monospace;
-  font-size: 14px;
-  font-weight: bold;
-  background-color: rgba(251, 191, 36, 0.1);
-  padding: 4px 10px;
-  border-radius: 999px;
+.user-point:hover {
+  background-color: rgba(234, 88, 12, 0.1);
 }
+
+/* ui: Ngọn lửa màu cam (gradient) LeetCode style */
+.point-icon-flame {
+  color: #ea580c;
+  fill: #ea580c;
+  filter: drop-shadow(0 0 3px rgba(234, 88, 12, 0.4));
+}
+
+/* ui: Đưa avatar về khối tròn cơ bản, nền xanh dương truyền thống tạo độ trust (như Github/Gitlab) */
 .user-avatar {
   width: 32px;
   height: 32px;
-  background-color: #3b82f6;
-  color: #fff;
+  background-color: #2563eb; /* Xanh dương basic */
+  color: #ffffff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
-.btn-logout {
+
+.user-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+}
+
+/* ui: Dropdown Menu hiện đại */
+.user-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 220px;
+  background-color: #1a1a1a;
+  border: 1px solid #333333;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-header {
+  padding: 16px;
+  background-color: #202020;
+}
+
+.dropdown-name {
+  margin: 0;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-username {
+  margin: 4px 0 0 0;
+  color: #a1a1aa;
+  font-size: 12px;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #333333;
+  width: 100%;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
   background: transparent;
-  border: 1px solid #444;
-  color: #9ca3af;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
+  border: none;
+  color: #d1d5db;
   font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+  text-align: left;
 }
-.btn-logout:hover { border-color: #ef4444; color: #ef4444; }
+
+.dropdown-item:hover {
+  background-color: #2a2a2a;
+  color: #ffffff;
+}
+
+.text-danger {
+  color: #ef4444;
+}
+
+.text-danger:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+}
+
+.nav-skeleton-loader {
+  width: 120px;
+  height: 34px;
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  animation: pulse 2s infinite;
+}
+
+@media (max-width: 768px) {
+  .navbar-container {
+    padding: 0 16px;
+    height: 60px;
+  }
+
+  .nav-left { gap: 16px; }
+  .logo-text { display: none; }
+  .nav-item { padding: 6px 8px; font-size: 13px; }
+  .nav-links { gap: 4px; }
+  .user-menu { gap: 12px; }
+  
+  .user-point {
+    padding: 2px 4px;
+    font-size: 13px;
+  }
+}
