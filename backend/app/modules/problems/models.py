@@ -9,6 +9,8 @@ from sqlalchemy import (
     Integer,
     ForeignKey,
     Enum,
+    BigInteger,
+    func
 )
 from datetime import datetime
 from app.core.db import Base
@@ -61,7 +63,7 @@ class Problems(Base):
     )
 
     def __repr__(self):
-        return f"<Problems(id={self.id}, title='{self.title}', difficulty='{self.difficulty}')>"
+        return f"<Problems(id={self.id}, title='{self.title}', point={self.point}, difficulty='{self.difficulty}')>"
 
 
 class ProblemExamples(Base):
@@ -163,3 +165,23 @@ class TestCases(Base):
 
     def __repr__(self):
         return f"<TestCases(id={self.id}, problem_id={self.problem_id}, is_hidden={self.is_hidden})>"
+
+
+class ProblemStats(Base):
+    __tablename__ = "problem_stats"
+
+    problem_id = Column(
+        BigInteger,
+        ForeignKey("problems.id", ondelete="CASCADE"),
+        primary_key=True
+    )
+
+    attempts = Column(Integer, nullable=False, default=0)
+    accepted = Column(Integer, nullable=False, default=0)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now()
+    )

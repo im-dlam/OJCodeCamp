@@ -1,34 +1,102 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
-from app.core.deps import get_db
+from sqlalchemy import select, desc, func, literal
+from app.core.deps import get_current_user, get_db
 from app.core.exceptions import APIException
-from .models import Problems, ProblemExamples, ProblemConstraints, ProblemTags, TestCases
+from app.modules.submissions.models import Submissions
+from app.modules.submissions.schemas import SubmissionStatusSchema
+from app.authorization.TLConfig import TL
+from .models import Problems, ProblemExamples, ProblemConstraints, ProblemTags, TestCases, ProblemStats
 from app.modules.problems.schemas import ProblemListSchema, ProblemDetailSchema, ProblemCreateSchema, ProblemUpdateSchema
 
 router = APIRouter(prefix="/problems", tags=["Problems"])
 
 
 @router.get("/", response_model=dict)
-async def get_problems(skip: int = Query(0, ge=0), limit: int = Query(10, ge=1, le=100), difficulty: str = Query(None), category: str = Query(None), db: AsyncSession = Depends(get_db)):
+async def get_problems(
+    request: Request,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    difficulty: str | None = None,
+    category: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
     """Lấy danh sách bài toán"""
+    # feature: giải mã cookie token để xác định user hiện tại
+    user = None
+    access_token = request.cookies.get("access_token")
+    if access_token:
+        try:
+            user = TL.verify(access_token)
+        except Exception:
+            pass 
+
     try:
-        query = select(Problems)
-        
+        filters = []
         if difficulty:
-            query = query.where(Problems.difficulty == difficulty)
+            filters.append(Problems.difficulty == difficulty)
         if category:
-            query = query.where(Problems.category == category)
+            filters.append(Problems.category == category)
+
+        # feature: tính tổng record dựa trên filter phục vụ metadata phân trang
+        total = await db.scalar(
+            select(func.count(Problems.id)).where(*filters)
+        )
+
+        # feature: expression kiểm tra user đã AC (Accepted) bài này chưa
+        if user:
+            is_solved_expr = (
+                select(1)
+                .where(
+                    (Submissions.problem_id == Problems.id) &
+                    (Submissions.user_id == user['id']) &
+                    (Submissions.status == SubmissionStatusSchema.ACCEPTED.value) 
+                )
+                .exists()
+            ).label("is_solved")
+        else:
+            is_solved_expr = literal(False).label("is_solved")
+
+        # feature: truy vấn gộp thông tin Problems, ProblemStats (để tính rate) và trạng thái is_solved
+        query = (
+            select(Problems, ProblemStats.accepted, ProblemStats.attempts, is_solved_expr)
+            .outerjoin(ProblemStats, ProblemStats.problem_id == Problems.id)
+            .where(*filters)
+            .order_by(desc(Problems.created_at))
+            .offset(skip)
+            .limit(limit)
+        )
         
-        query = query.order_by(desc(Problems.created_at)).offset(skip).limit(limit)
         result = await db.execute(query)
-        problems = result.scalars().all()
-        
-        problem_list = [ProblemListSchema.model_validate(p) for p in problems]
-        
-        return {"success": True, "data": problem_list, "total": len(problem_list), "skip": skip, "limit": limit}
+        rows = result.all()
+
+        data_response = []
+        for problem_obj, accepted, attempts, is_solved in rows:
+            # feature: tính tỷ lệ pass bài
+            accepted = accepted or 0
+            attempts = attempts or 0
+            acceptance_rate = round(accepted * 100 / attempts, 2) if attempts > 0 else 0
+
+            prob_dict = ProblemListSchema.model_validate(problem_obj).model_dump()
+            prob_dict["acceptance_rate"] = acceptance_rate
+            prob_dict["is_solved"] = is_solved
+            data_response.append(prob_dict)
+
+        return {
+            "success": True,
+            "data": data_response,
+            "total": total or 0,
+            "current_count": len(rows),
+            "skip": skip,
+            "limit": limit,
+            "has_next": (skip + limit) < (total or 0),
+        }
+
     except Exception as e:
-        raise APIException(status_code=500, message=str(e))
+        raise APIException(
+            status_code=500,
+            message=str(e)
+        )
 
 
 @router.get("/{endpoint}", response_model=dict)
