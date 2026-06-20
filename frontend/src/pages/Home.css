@@ -1,5 +1,4 @@
 
-/* style: cập nhật nền trang về #1a1a1a theo yêu cầu */
 .lc-layout {
   min-height: 100vh;
   background-color: #1a1a1a; 
@@ -305,7 +304,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  flex-wrap: wrap; /* Hỗ trợ rơi dòng cho pagination nếu màn hình quá hẹp */
+  flex-wrap: wrap; 
   gap: 8px;
   margin-top: auto; 
   padding: 16px 0 32px 0;
@@ -405,7 +404,6 @@
     margin-top: 4px;
   }
 
-  /* List Responsive: Ẩn bớt cột để tránh vỡ giao diện trên Mobile */
   .lc-row {
     grid-template-columns: 32px 1fr 70px; /* Chỉ hiển thị Status | Title | Difficulty */
     padding: 12px;

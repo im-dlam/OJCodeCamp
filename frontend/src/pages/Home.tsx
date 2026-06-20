@@ -21,7 +21,7 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10; 
 
-  // fix: reset về trang 1 khi thay đổi các bộ lọc tìm kiếm
+  // reset về trang 1 khi thay đổi các bộ lọc tìm kiếm
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, sortOrder, activeTag]);
