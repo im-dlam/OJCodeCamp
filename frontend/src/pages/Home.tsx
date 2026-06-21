@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import  { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useProblems } from "../hooks/useProblems";
 import Navbar from "../components/Navbar";
@@ -20,6 +20,7 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10; 
 
+  // reset về trang 1 khi thay đổi các bộ lọc tìm kiếm
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, sortOrder, activeTag]);
@@ -77,21 +78,9 @@ export default function Home() {
     <div className="lc-layout">
       <Navbar />
       
-      {/* VÙNG CHỨA RELATIVE: Trở thành tọa độ gốc để gắn các thành phần */}
-      <div style={{ position: 'relative', width: '100%', minHeight: 'calc(100vh - 64px)' }}>
+      <div style={{ position: 'relative', width: '100%', minHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
         
-        {/* ================= 1. BẢNG PROBLEMS (CĂN GIỮA TUYỆT ĐỐI) ================= */}
-        {/* Dùng margin: 0 auto nên nó vĩnh viễn ở tâm màn hình, bỏ mặc Leaderboard */}
-        <main style={{ 
-          maxWidth: '1150px', // Rộng, to và dài ra theo đúng ý bạn
-          width: '100%',
-          margin: '32px auto', // KHÓA CHẾT Ở TRUNG TÂM
-          padding: '0 24px',
-          paddingBottom: '64px',
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '16px' 
-        }}>
+        <main className="lc-main-content">
           
           <div className="lc-tags-scroll">
             <div className="lc-tags-container">
@@ -119,7 +108,7 @@ export default function Home() {
                 <Search size={16} className="lc-search-icon" />
                 <input 
                   type="text" 
-                  placeholder="Search questions" 
+                  placeholder="Search questions..." 
                   className="lc-search-input" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -132,34 +121,31 @@ export default function Home() {
               >
                 <ArrowUpDown size={16} />
               </button>
-              <button className="lc-icon-btn"><SlidersHorizontal size={16} /></button>
+              <button className="lc-icon-btn" title="Bộ lọc nâng cao">
+                <SlidersHorizontal size={16} />
+              </button>
             </div>
             
             <div className="lc-toolbar-right">
-              <div className="lc-progress-text" style={{ display: 'flex', alignItems: 'center', color: '#bfbfbf', fontSize: '14px' }}>
-                <Database size={14} color="#3b82f6" style={{ marginRight: '6px' }} /> 
-                {currentCountFromAPI} / {totalFromAPI} problem
+              <div className="lc-progress-text">
+                <Database size={14} className="progress-icon" /> 
+                <span>{currentCountFromAPI} / {totalFromAPI} problems</span>
               </div>
-              <button className="lc-icon-btn"><Shuffle size={16} color="#3b82f6" /></button>
+              <button className="lc-icon-btn lc-pick-random" title="Chọn ngẫu nhiên 1 bài">
+                <Shuffle size={16} />
+              </button>
             </div>
           </div>
 
           <div className="lc-list-container">
-            <div className="lc-row lc-header">
-              <div className="col-status"></div>
-              <div className="col-title">Title</div>
-              <div className="col-category">Category</div>
-              <div className="col-diff">Difficulty</div>
-              <div className="col-point">Points</div>
-            </div>
-
             <div className="lc-rows-wrapper">
               {currentData.length === 0 ? (
                 <div className="lc-empty">
-                  {searchTerm ? "Không tìm thấy bài tập phù hợp." : "Chưa có bài tập nào."}
+                  <div className="empty-icon"><Search size={32} /></div>
+                  <p>{searchTerm ? "Không tìm thấy bài tập phù hợp." : "Chưa có bài tập nào."}</p>
                 </div>
               ) : (
-                currentData.map((prob) => {
+                currentData.map((prob, index) => {
                   const isSolved = prob.is_solved; 
                   
                   const diffClass = 
@@ -168,17 +154,35 @@ export default function Home() {
                     
                   const diffText = 
                     prob.difficulty === "Dễ" ? "Easy" : 
-                    prob.difficulty === "Trung bình" ? "Med." : "Hard";
+                    prob.difficulty === "Trung bình" ? "Medium" : "Hard";
+
+                  // fix: Tính toán Số Thứ Tự (STT) dựa trên trang hiện tại
+                  const serialNumber = (currentPage - 1) * itemsPerPage + index + 1;
 
                   return (
                     <Link to={`/problems/${prob.endpoint}`} key={prob.id} className="lc-row lc-item">
-                      <div className="col-status">
-                        {isSolved ? <Check size={16} className="lc-solved-icon" strokeWidth={3} /> : <Circle size={16} className="lc-unsolved-icon" />}
+                      <div className="col-status" title={isSolved ? "Đã giải quyết" : "Chưa giải quyết"}>
+                        {isSolved ? (
+                          <Check size={18} className="lc-solved-icon" strokeWidth={3} />
+                        ) : (
+                          <Circle size={14} className="lc-unsolved-icon" strokeWidth={2.5} />
+                        )}
                       </div>
-                      <div className="col-title">{prob.id}. {prob.title}</div>
-                      <div className="col-category">{prob.category}</div>
-                      <div className={`col-diff ${diffClass}`}>{diffText}</div>
-                      <div className="col-point">{prob.point}</div>
+                      <div className="col-title" title={prob.title}>
+                        <span className="prob-id">{serialNumber}.</span> {prob.title}
+                      </div>
+                      <div className="col-category">
+                        <span className="category-pill" title={`Danh mục: ${prob.category}`}>{prob.category}</span>
+                      </div>
+                      <div className="col-acceptance" title={`Tỷ lệ chấp nhận (Acceptance Rate): ${prob.acceptance_rate}%`}>
+                        {prob.acceptance_rate}%
+                      </div>
+                      <div className={`col-diff ${diffClass}`} title={`Độ khó: ${diffText}`}>
+                        {diffText}
+                      </div>
+                      <div className="col-point" title={`Điểm thưởng (Points): ${prob.point}`}>
+                        {prob.point}
+                      </div>
                     </Link>
                   );
                 })
@@ -208,7 +212,7 @@ export default function Home() {
 
               <button 
                 className="page-btn" 
-                onClick={() => setCurrentPage(prev => prev + 1)}
+                onClick={() => setCurrentPage(prev => Math.max(prev + 1, totalPages))}
                 disabled={currentPage === totalPages && !hasNextFromAPI}
               >
                 <ChevronRight size={16} />
@@ -217,18 +221,8 @@ export default function Home() {
           )}
         </main>
 
-        {/* ================= 2. LEADERBOARD (NỔI TỰ DO Ở GÓC PHẢI) ================= */}
-        {/* Thuộc tính Absolute giúp khối này không có tác động vật lý lên bảng Problems */}
-        <aside style={{ 
-          position: 'absolute', 
-          top: '32px',      // Ngang hàng với đỉnh của bảng Problems
-          right: '32px',    // Bám chặt lề phải màn hình 32px
-          bottom: '0',      // Kéo dài đến cuối trang
-          width: '320px', 
-          pointerEvents: 'none' // Xuyên click, để không vô tình che mất Problems nếu màn hình nhỏ
-        }}>
-          {/* Vẫn giữ hiệu ứng trôi theo (Sticky) siêu mượt */}
-          <div style={{ position: 'sticky', top: '32px', pointerEvents: 'auto' }}>
+        <aside className="lc-leaderboard-aside">
+          <div className="lc-leaderboard-sticky">
             <TopLeaderboard />
           </div>
         </aside>

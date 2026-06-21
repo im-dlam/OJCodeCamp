@@ -1,12 +1,17 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCurrentUser, useLogout } from '../hooks/useAuth';
+import { TerminalSquare, Flame, LogOut, User, Settings } from 'lucide-react';
 import './Navbar.css';
 
 export default function Navbar() {
   const { data: user, isLoading } = useCurrentUser();
   const { mutate: logout } = useLogout();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = () => {
     logout(undefined, {
@@ -14,35 +19,80 @@ export default function Navbar() {
     });
   };
 
+  const isActive = (path: string) => location.pathname === path;
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <nav className="navbar-container">
       <div className="nav-left">
         <Link to="/" className="nav-logo">
-          UTT<span>CodeCamp</span>
+          <TerminalSquare size={24} className="logo-icon" />
+          <span className="logo-text">UTT<span className="logo-accent">CodeCamp</span></span>
         </Link>
         <div className="nav-links">
-          <Link to="/" className="nav-item active">Problems</Link>
-          <Link to="/contests" className="nav-item">Contests</Link>
-          <Link to="/leaderboard" className="nav-item">Leaderboard</Link>
+          <Link to="/" className={`nav-item ${isActive('/') ? 'active' : ''}`}>Problems</Link>
+          <Link to="/contests" className={`nav-item ${isActive('/contests') ? 'active' : ''}`}>Contests</Link>
+          <Link to="/leaderboard" className={`nav-item ${isActive('/leaderboard') ? 'active' : ''}`}>Leaderboard</Link>
         </div>
       </div>
 
       <div className="nav-right">
         {isLoading ? (
-          <div style={{ color: '#9ca3af', fontSize: '14px' }}>Loading...</div>
+          <div className="nav-skeleton-loader"></div>
         ) : user ? (
-          <div className="user-menu">
-            <div className="user-point">⭐ {user.point}</div>
-            <div className="user-avatar" title={user.full_name}>
+          <div className="user-menu" ref={dropdownRef}>
+            
+            <div className="user-point" title="Tổng điểm">
+              <Flame size={18} className="point-icon-flame" />
+              <span>{user.point.toLocaleString()}</span>
+            </div>
+            
+            <div 
+              className="user-avatar" 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              title="Tài khoản"
+            >
               {user.username.charAt(0).toUpperCase()}
             </div>
-            <button onClick={handleLogout} className="btn-logout">Đăng xuất</button>
+
+            {isMenuOpen && (
+              <div className="user-dropdown-menu">
+                <div className="dropdown-header">
+                  <p className="dropdown-name">{user.full_name || user.username}</p>
+                  <p className="dropdown-username">@{user.username}</p>
+                </div>
+                <div className="dropdown-divider"></div>
+                
+                {user.role === 'ADMIN' && (
+                  <Link to="/admin/" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                    <Settings size={16} /> Quản trị viên
+                  </Link>
+                )}
+
+                <Link to="/profile" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                  <User size={16} /> Hồ sơ cá nhân
+                </Link>
+                <button onClick={handleLogout} className="dropdown-item text-danger">
+                  <LogOut size={16} /> Đăng xuất
+                </button>
+              </div>
+            )}
+            
           </div>
         ) : (
-          <>
+          <div className="auth-actions">
             <Link to="/login" className="nav-btn-login">Đăng nhập</Link>
             <Link to="/signup" className="nav-btn-signup">Đăng ký</Link>
-          </>
+          </div>
         )}
       </div>
     </nav>

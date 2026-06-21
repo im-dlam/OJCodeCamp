@@ -20,14 +20,24 @@ export const ProblemDescription: React.FC<Props> = ({ problem, isLoading }) => {
     return <div className="desc-content"><p style={{ color: '#ef4444' }}>Không tìm thấy bài toán!</p></div>;
   }
 
-  const diffColor = 
-    problem.difficulty === 'Dễ' ? 'tag-easy' : 
-    problem.difficulty === 'Trung bình' ? 'tag-medium' : 'tag-hard'; 
+  const getDifficultyStyle = (difficulty: string) => {
+    switch (difficulty) {
+      case 'Dễ':
+        return { color: '#2cbb5d', backgroundColor: 'rgba(44, 187, 93, 0.15)' };
+      case 'Trung bình':
+        return { color: '#ffc01e', backgroundColor: 'rgba(255, 192, 30, 0.15)' };
+      case 'Khó':
+        return { color: '#ff375f', backgroundColor: 'rgba(255, 55, 95, 0.15)' };
+      default:
+        return { color: '#8c8c8c', backgroundColor: 'rgba(140, 140, 140, 0.15)' };
+    }
+  };
+
+  const diffStyle = getDifficultyStyle(problem.difficulty);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       
-      {/* tabmenu*/}
       <div className="panel-tabs">
         <button 
           className={`tab-btn ${activeTab === 'description' ? 'active' : ''}`}
@@ -44,7 +54,6 @@ export const ProblemDescription: React.FC<Props> = ({ problem, isLoading }) => {
         </button>
       </div>
 
-      {/* content */}
       <div className="desc-content" style={{ flex: 1, overflowY: 'auto' }}>
         
         {activeTab === 'description' && (
@@ -53,16 +62,23 @@ export const ProblemDescription: React.FC<Props> = ({ problem, isLoading }) => {
               {problem.id}. {problem.title}
             </h1>
             
-            {/* Tags */}
-            <div className="tag-container" style={{ marginBottom: '24px' }}>
-              <span className={diffColor}>{problem.difficulty}</span>
+            <div className="tag-container" style={{ marginBottom: '24px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ 
+                color: diffStyle.color, 
+                backgroundColor: diffStyle.backgroundColor, 
+                padding: '4px 12px', 
+                borderRadius: '12px', 
+                fontSize: '12px', 
+                fontWeight: 600 
+              }}>
+                {problem.difficulty}
+              </span>
               {problem.tags.map((tag) => (
                 <span key={tag.id} className="tag-link">{tag.tag_name}</span>
               ))}
             </div>
 
             <div>
-              {/* desc */}
               <div style={{ marginBottom: '32px', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '14px', color: '#eff1f6' }}>
                 {problem.description}
               </div>
