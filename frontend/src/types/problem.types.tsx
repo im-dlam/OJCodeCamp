@@ -74,3 +74,16 @@ export interface ProblemCreatePayload {
   tags: ProblemTag[];
   test_cases: ProblemTestCase[];
 }
+
+export interface ProblemUpdatePayload {
+  title: string;
+  difficulty: string;
+  category: string;
+  description: string;
+  point: number;
+}
+
+export interface ProblemActionResult {
+  success: Boolean;
+  message: string
+}
