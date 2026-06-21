@@ -1,8 +1,7 @@
-// file: Navbar.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCurrentUser, useLogout } from '../hooks/useAuth';
-import { TerminalSquare, Flame, LogOut, User } from 'lucide-react';
+import { TerminalSquare, Flame, LogOut, User, Settings } from 'lucide-react';
 import './Navbar.css';
 
 export default function Navbar() {
@@ -11,7 +10,6 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // feature: Quản lý trạng thái đóng/mở của User Dropdown Menu
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -23,7 +21,6 @@ export default function Navbar() {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // feature: Tự động đóng menu khi click ra ngoài (Outside Click Detection)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -54,7 +51,6 @@ export default function Navbar() {
         ) : user ? (
           <div className="user-menu" ref={dropdownRef}>
             
-            {/* ui: Icon ngọn lửa chuẩn style LeetCode streak */}
             <div className="user-point" title="Tổng điểm">
               <Flame size={18} className="point-icon-flame" />
               <span>{user.point.toLocaleString()}</span>
@@ -68,7 +64,6 @@ export default function Navbar() {
               {user.username.charAt(0).toUpperCase()}
             </div>
 
-            {/* feature: Dropdown menu hiện ra khi click vào avatar */}
             {isMenuOpen && (
               <div className="user-dropdown-menu">
                 <div className="dropdown-header">
@@ -76,6 +71,13 @@ export default function Navbar() {
                   <p className="dropdown-username">@{user.username}</p>
                 </div>
                 <div className="dropdown-divider"></div>
+                
+                {user.role === 'ADMIN' && (
+                  <Link to="/admin/" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                    <Settings size={16} /> Quản trị viên
+                  </Link>
+                )}
+
                 <Link to="/profile" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                   <User size={16} /> Hồ sơ cá nhân
                 </Link>
