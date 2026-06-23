@@ -6,7 +6,7 @@ import './App.css';
 import Leaderboard from './pages/Leaderboard';
 import { QueryClient } from '@tanstack/react-query'
 import { Toaster } from "react-hot-toast";
-
+import CreateProblem from './pages/Admin/CreateProblem';
 export const queryClient = new QueryClient();
 function App() {
   return (
@@ -19,6 +19,7 @@ function App() {
         <Route path="/login" element={<AuthPage />} />
         <Route path="/signup" element={<AuthPage />} />
         <Route path="/problems/:endpoint" element={<ProblemWorkspace />} />
+        <Route path="/admin/create" element={<CreateProblem />} />
       </Routes>
     </BrowserRouter>
     </>

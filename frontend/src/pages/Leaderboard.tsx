@@ -1,7 +1,7 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
 import { useTopLeaderBoard } from '../hooks/useAuth';
-import { Trophy, Crown, Medal } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import './Leaderboard.css';
 
 export default function Leaderboard() {
@@ -29,13 +29,6 @@ export default function Leaderboard() {
 
   const users = data?.leaderboard || [];
 
-  const getRankBadge = (index: number) => {
-    if (index === 0) return <Crown size={24} color="#eab308" />; 
-    if (index === 1) return <Medal size={22} color="#94a3b8" />; 
-    if (index === 2) return <Medal size={22} color="#d97706" />; 
-    return <span className="lbp-rank-number">{index + 1}</span>;
-  };
-
   return (
     <div className="lbp-layout">
       <Navbar />
@@ -44,12 +37,12 @@ export default function Leaderboard() {
         <div className="lbp-header">
           <Trophy size={36} className="lbp-main-icon" />
           <h1 className="lbp-title">Global Ranking</h1>
-          <p className="lbp-subtitle">Top LeaderBoard</p>
+          <p className="lbp-subtitle">Top CodeCamp Leaderboard</p>
         </div>
 
         <div className="lbp-card">
           <div className="lbp-card-header">
-            <div className="col-rank">Rank</div>
+            <div className="col-rank">#</div>
             <div className="col-user">Programmer</div>
             <div className="col-score">Score</div>
           </div>
@@ -59,25 +52,29 @@ export default function Leaderboard() {
           ) : (
             <ul className="lbp-list">
               {users.map((user, index) => (
-                <li key={user.username} className={`lbp-item rank-${index + 1}`}>
+                <li key={user.username} className="lbp-item">
                   
                   <div className="lbp-item-left">
-                    <div className="lbp-rank">
-                      {getRankBadge(index)}
+                    {/* fix: hiển thị thẳng Số Thứ Tự (Index) thay vì icon màu mè */}
+                    <div className="lbp-rank" title={`Hạng ${index + 1}`}>
+                      <span className={`lbp-rank-number ${index < 3 ? `top-${index + 1}` : ''}`}>
+                        {index + 1}
+                      </span>
                     </div>
                     
+                    {/* fix: Avatar hình tròn màu solid cơ bản, không dùng gradient */}
                     <div className="lbp-avatar" title={user.full_name}>
                       {user.username.charAt(0).toUpperCase()}
                     </div>
                     
                     <div className="lbp-user-info">
-                      <span className="lbp-fullname">{user.full_name || user.username}</span>
-                      <span className="lbp-username">@{user.username}</span>
+                      <span className="lbp-fullname" title={user.full_name || user.username}>{user.full_name || user.username}</span>
+                      <span className="lbp-username" title={`@${user.username}`}>@{user.username}</span>
                     </div>
                   </div>
                   
                   <div className="lbp-item-right">
-                    <span className="lbp-points">{user.point.toLocaleString()}</span>
+                    <span className="lbp-points" title={`${user.point.toLocaleString()} điểm`}>{user.point.toLocaleString()}</span>
                   </div>
                   
                 </li>
