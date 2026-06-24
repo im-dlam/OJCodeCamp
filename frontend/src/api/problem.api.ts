@@ -5,7 +5,7 @@ import type {
 } from '../types';
 
 
-const baseURL = import.meta.env.VITE_API_URL;
+const baseURL = import.meta.env.VITE_API_URL || "";
 
 export const fetch_problems = async (limit: number = 10): Promise<ProblemFetchResult> => {
     const res = await fetch(`${baseURL}/api/problems/?skip=0&limit=${limit}`, {
