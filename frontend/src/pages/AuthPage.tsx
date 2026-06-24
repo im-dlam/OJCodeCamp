@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast'; 
 import { useLogin, useSignup } from '../hooks/useAuth'; 
 import type { LoginForm, SignupForm } from '../types';
+import Navbar from '../components/Navbar';
 import './Auth.css';
 
 export default function AuthPage() {
@@ -18,8 +19,8 @@ export default function AuthPage() {
     full_name: '',
   });
 
-  const { mutate: loginMutate, isPending: isLoginPending, error: loginError } = useLogin();
-  const { mutate: signupMutate, isPending: isSignupPending, error: signupError } = useSignup();
+  const { mutate: loginMutate, isPending: isLoginPending, error: _loginError } = useLogin();
+  const { mutate: signupMutate, isPending: isSignupPending, error: _signupError } = useSignup();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -71,6 +72,8 @@ export default function AuthPage() {
   const isPending = isLoginView ? isLoginPending : isSignupPending;
 
   return (
+    <>
+    <Navbar/>
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
@@ -91,7 +94,7 @@ export default function AuthPage() {
               className="auth-input"
               required
               placeholder="username"
-            />
+              />
           </div>
 
           {!isLoginView && (
@@ -106,7 +109,7 @@ export default function AuthPage() {
                   className="auth-input"
                   required={!isLoginView}
                   placeholder="Your name"
-                />
+                  />
               </div>
               <div className="auth-input-group">
                 <label className="auth-label">Email</label>
@@ -118,7 +121,7 @@ export default function AuthPage() {
                   className="auth-input"
                   required={!isLoginView}
                   placeholder="Your email"
-                />
+                  />
               </div>
             </>
           )}
@@ -133,7 +136,7 @@ export default function AuthPage() {
               className="auth-input"
               required
               placeholder="••••••••"
-            />
+              />
           </div>
 
           <button type="submit" className="auth-btn" disabled={isPending}>
@@ -149,11 +152,12 @@ export default function AuthPage() {
             type="button" 
             className="auth-link" 
             onClick={toggleView}
-          >
+            >
             {isLoginView ? 'Đăng ký ngay' : 'Đăng nhập'}
           </button>
         </div>
       </div>
     </div>
+    </>
   );
 }
