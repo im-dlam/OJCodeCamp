@@ -9,7 +9,7 @@ from .schemas import UserPublicSchema, UserSignupSchema, UserLoginSchema, UserLe
 from app.core.security import get_password, create_access_token, verify_password
 from app.core.crud import create_user
 from app.core.exceptions import APIException
-from sqlalchemy import select
+from sqlalchemy import desc, select
 
 from datetime import timedelta
 
@@ -94,7 +94,7 @@ async def login(user: UserLoginSchema, db: AsyncSession = Depends(get_db)):
 async def leaderboard(db: AsyncSession = Depends(get_db)):
     
     limit = 10
-    query = select(Users).order_by(Users.point).limit(limit)
+    query = select(Users).order_by(desc(Users.point)).limit(limit)
     exc = await db.execute(query)
     
     top_users = []
