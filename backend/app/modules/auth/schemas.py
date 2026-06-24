@@ -53,7 +53,11 @@ class UserPublicSchema(BaseModel):
     
     class Config:
         from_attributes = True
-        
+    
+    @field_validator("role",mode="before")
+    @classmethod
+    def to_upper(cls, value: str) -> str:
+        return value.upper()
 
 
 class UserLoginSchema(BaseModel):
@@ -65,6 +69,15 @@ class UserLoginSchema(BaseModel):
         if not self.username:
             raise ValueError("You must enter your username or email address.")
         return self
+    
+    class Config:
+        from_attributes = True
+        
+        
+class UserLeaderBoard(BaseModel):
+    username: str
+    point: float
+    full_name: str
     
     class Config:
         from_attributes = True

@@ -5,10 +5,11 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
 
-from app.core.deps import get_db
+from app.core.deps import get_current_user, get_db
 from app.core.redis import redis_client
 
 from app.modules.problems.models import Problems
+from app.modules.auth.schemas import UserPublicSchema
 from .models import Submissions, SubmissionResults
 from .schemas import (
     SubmissionCreateSchema,
@@ -27,8 +28,8 @@ router = APIRouter(prefix="/submissions", tags=["Submissions"])
 @router.post("/", response_model=SubmissionCreateResponseSchema)
 async def submit_code(
     submission_data: SubmissionCreateSchema,
-    user_id: int = Query(...),
-    db: AsyncSession = Depends(get_db),
+    user: UserPublicSchema = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """Submit code cho một bài toán (Bắn vào Queue, không chờ chấm xong)"""
     try:
@@ -40,7 +41,7 @@ async def submit_code(
             raise HTTPException(status_code=404, detail="Bài toán không tìm thấy")
 
         new_submission = Submissions(
-            user_id=user_id,
+            user_id=user.id,
             problem_id=submission_data.problem_id,
             code=submission_data.code,
             language=submission_data.language.value,  # Enum sang String
@@ -53,7 +54,7 @@ async def submit_code(
 
         job_data = {
             "submission_id": new_submission.id,
-            "user_id": user_id,
+            "user_id": user.id,
             "problem_id": submission_data.problem_id,
             "language": submission_data.language.value,
             "source_code": submission_data.code,
@@ -75,7 +76,8 @@ async def submit_code(
 
 @router.get("/", response_model=SubmissionListResponseSchema)
 async def get_submissions(
-    user_id: int,
+    # user_id: int,
+    user: UserPublicSchema = Depends(get_current_user),
     problem_id: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
@@ -83,7 +85,7 @@ async def get_submissions(
 ):
     """Lấy danh sách submission của user (Có phân trang)"""
     try:
-        query = select(Submissions).where(Submissions.user_id == user_id)
+        query = select(Submissions).where(Submissions.user_id == user.id)
 
         if problem_id:
             query = query.where(Submissions.problem_id == problem_id)
@@ -97,7 +99,7 @@ async def get_submissions(
         count_query = (
             select(func.count())
             .select_from(Submissions)
-            .where(Submissions.user_id == user_id)
+            .where(Submissions.user_id == user.id)
         )
         if problem_id:
             count_query = count_query.where(Submissions.problem_id == problem_id)
@@ -163,9 +165,9 @@ async def get_problem_stats(problem_id: int, db: AsyncSession = Depends(get_db))
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{submission_id}/result", response_model=SubmissionResultResponseSchema)
+@router.get("/{submission_id}/result", response_model=dict) 
 async def get_submission_result(submission_id: int, db: AsyncSession = Depends(get_db)):
-    """Lấy kết quả chi tiết từng testcase của 1 submission"""
+    """Lấy kết quả chi tiết của 1 submission (Chỉ trả về testcase bị lỗi)"""
     try:
         submission = await db.scalar(
             select(Submissions).where(Submissions.id == submission_id)
@@ -173,7 +175,7 @@ async def get_submission_result(submission_id: int, db: AsyncSession = Depends(g
         if not submission:
             raise HTTPException(status_code=404, detail="Submission không tìm thấy")
 
-        results = (
+        all_results = (
             await db.scalars(
                 select(SubmissionResults).where(
                     SubmissionResults.submission_id == submission_id
@@ -181,14 +183,17 @@ async def get_submission_result(submission_id: int, db: AsyncSession = Depends(g
             )
         ).all()
 
-        passed_count = sum(1 for r in results if r.result == "Passed")
+        passed_count = sum(1 for r in all_results if r.result.upper() == "PASSED")
+        total_count = len(all_results)
+
+        failed_results = [r for r in all_results if r.result.upper() != "PASSED"]
 
         return {
             "success": True,
             "submission_id": submission_id,
             "status": submission.status,
             "passed": passed_count,
-            "total": len(results),
+            "total": total_count,
             "execution_time": submission.execution_time,
             "memory_used": submission.memory_used,
             "results": [
@@ -196,18 +201,18 @@ async def get_submission_result(submission_id: int, db: AsyncSession = Depends(g
                     "submission_id": r.submission_id,
                     "test_case_id": r.test_case_id,
                     "result": r.result,
+                    "input_text": r.input_text,
                     "output_text": r.output_text,
                     "expected_output": r.expected_output,
                     "error_message": r.error_message,
                 }
-                for r in results
+                for r in failed_results
             ],
         }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get(
     "/user/{user_id}/problem/{problem_id}/accepted",

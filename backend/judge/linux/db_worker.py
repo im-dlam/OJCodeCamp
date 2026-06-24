@@ -45,6 +45,7 @@ INSERT INTO submission_results (
     submission_id,
     test_case_id,
     result,
+    input_text,
     output_text,
     expected_output,
     error_message
@@ -53,6 +54,7 @@ SELECT
     submission_id,
     test_case_id,
     result::submissionresultstatus,
+    input_text,
     output_text,
     expected_output,
     error_message
@@ -60,6 +62,7 @@ FROM unnest(
     :submission_ids,
     :test_case_ids,
     :results,
+    :inputs,
     :outputs,
     :expecteds,
     :errors
@@ -67,6 +70,7 @@ FROM unnest(
     submission_id,
     test_case_id,
     result,
+    input_text,
     output_text,
     expected_output,
     error_message
@@ -75,6 +79,7 @@ FROM unnest(
     bindparam("submission_ids", type_=ARRAY(BigInteger)),
     bindparam("test_case_ids", type_=ARRAY(BigInteger)),
     bindparam("results", type_=ARRAY(Text)),
+    bindparam("inputs", type_=ARRAY(Text)),
     bindparam("outputs", type_=ARRAY(Text)),
     bindparam("expecteds", type_=ARRAY(Text)),
     bindparam("errors", type_=ARRAY(Text)),
@@ -111,6 +116,7 @@ async def bulk_update(rows: list):
             submission_ids = []
             test_case_ids = []
             results = []
+            inputs = []
             outputs = []
             expecteds = []
             errors = []
@@ -121,6 +127,7 @@ async def bulk_update(rows: list):
                     submission_ids.append(sub_id)
                     test_case_ids.append(log["test_case_id"])
                     results.append(log["result"])
+                    inputs.append(log.get("input_text"))
                     outputs.append(log.get("output_text"))
                     expecteds.append(log.get("expected_output"))
                     errors.append(log.get("error_message"))
@@ -132,6 +139,7 @@ async def bulk_update(rows: list):
                         "submission_ids": submission_ids,
                         "test_case_ids": test_case_ids,
                         "results": results,
+                        "inputs": inputs,
                         "outputs": outputs,
                         "expecteds": expecteds,
                         "errors": errors,

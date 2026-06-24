@@ -1,5 +1,4 @@
-// file: Home.tsx
-import React, { useState, useMemo, useEffect } from "react";
+import  { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useProblems } from "../hooks/useProblems";
 import Navbar from "../components/Navbar";
@@ -146,7 +145,7 @@ export default function Home() {
                   <p>{searchTerm ? "Không tìm thấy bài tập phù hợp." : "Chưa có bài tập nào."}</p>
                 </div>
               ) : (
-                currentData.map((prob) => {
+                currentData.map((prob, index) => {
                   const isSolved = prob.is_solved; 
                   
                   const diffClass = 
@@ -156,6 +155,9 @@ export default function Home() {
                   const diffText = 
                     prob.difficulty === "Dễ" ? "Easy" : 
                     prob.difficulty === "Trung bình" ? "Medium" : "Hard";
+
+                  // fix: Tính toán Số Thứ Tự (STT) dựa trên trang hiện tại
+                  const serialNumber = (currentPage - 1) * itemsPerPage + index + 1;
 
                   return (
                     <Link to={`/problems/${prob.endpoint}`} key={prob.id} className="lc-row lc-item">
@@ -167,7 +169,7 @@ export default function Home() {
                         )}
                       </div>
                       <div className="col-title" title={prob.title}>
-                        <span className="prob-id">{prob.id}.</span> {prob.title}
+                        <span className="prob-id">{serialNumber}.</span> {prob.title}
                       </div>
                       <div className="col-category">
                         <span className="category-pill" title={`Danh mục: ${prob.category}`}>{prob.category}</span>

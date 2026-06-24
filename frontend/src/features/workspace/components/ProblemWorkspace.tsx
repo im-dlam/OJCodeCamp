@@ -10,9 +10,9 @@ import { ChevronLeft, ChevronRight, List, Timer, UserCircle } from 'lucide-react
 import './Workspace.css';
 
 const DEFAULT_TEMPLATES: Record<string, string> = {
-  python: 'def solve():\n    # Viết code của bạn ở đây\n    pass\n\nif __name__ == "__main__":\n    solve()',
-  cpp: '#include <iostream>\nusing namespace std;\n\nint main() {\n    // Viết code của bạn ở đây\n    return 0;\n}',
-  java: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Viết code của bạn ở đây\n    }\n}'
+  python: 'def solve():\n    # Write your code\n    pass\n\nif __name__ == "__main__":\n    solve()',
+  cpp: '#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your code\n    return 0;\n}',
+  java: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Write your code\n    }\n}'
 };
 
 export default function ProblemWorkspace() {

@@ -112,6 +112,7 @@ class SubmissionResults(Base):
         comment="Kết quả test case"
     )
     output_text = Column(Text, nullable=True, comment="Output thực tế")
+    input_text = Column(Text, nullable=True, comment="Input thực tế")
     expected_output = Column(Text, nullable=True, comment="Output mong đợi")
     error_message = Column(Text, nullable=True, comment="Thông báo lỗi")
     

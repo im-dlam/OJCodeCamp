@@ -32,10 +32,14 @@ async def get_current_user(
 
     if not token:
         raise APIException(status_code=401, message="Missing authentication token")
-    payload = (
-        TL.decode_token_micro(token, settings.PREFIX) if token.startswith(settings.PREFIX)
-        else TL.verify(token)
-    )
+    try:
+        payload = (
+            TL.decode_token_micro(token, settings.PREFIX) if token.startswith(settings.PREFIX)
+            else TL.verify(token)
+        )
+    except:
+        raise APIException(status_code=401, message="Token is invalid, expired, or malformed")
+        
 
     if not payload or not (username := payload.get("username")):
         raise APIException(status_code=401, message="Token is invalid, expired, or malformed")
