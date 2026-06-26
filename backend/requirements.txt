@@ -19,3 +19,4 @@ orjson==3.11.7
 cryptography==45.0.3
 aiohttp==3.12.12
 web3==7.12.0
+cachetools
