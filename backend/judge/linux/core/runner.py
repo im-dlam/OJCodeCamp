@@ -16,22 +16,18 @@ async def run_native_code_async(
                  executable_path += ".exe"
         cmd = executable_path.split()
     else:
-        # Chạy Sandbox qua Cgroups/Namespace
         memory_bytes = memory_mb * 1024 * 1024
+        
+        # Ghép chuỗi lệnh mục tiêu
+        target_cmd = " ".join(executable_path.split())
+        
         cmd = [
-            "sudo", "unshare", "-n",
-            "sudo", "-u", "nobody",
-            "prlimit",
-            f"--as={memory_bytes}",     
-            f"--cpu={timeout_secs}",    
-            "--nproc=64",               
-            "--fsize=10485760",         
-            "--",
-            *executable_path.split()
+            "unshare", "-n",
+            "su", "-s", "/bin/sh", "nobody", "-c",
+            f"prlimit --as={memory_bytes} --cpu={timeout_secs} --nproc=64 --fsize=10485760 -- {target_cmd}"
         ]
 
     try:
-        # Spawn process 
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdin=asyncio.subprocess.PIPE,

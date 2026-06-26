@@ -2,7 +2,9 @@ import json, sys, os
 import shutil
 import time
 import asyncio
+import platform
 from pathlib import Path
+from cachetools import TTLCache
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(ROOT_DIR))
@@ -12,16 +14,15 @@ from app.core.redis import redis_client
 from app.core.db import AsyncSessionLocal
 from app.modules.problems.models import TestCases
 from sqlalchemy import select
-import platform
-
 from judge.linux.core.runner import run_native_code_async
 
-if platform.system() == "Linux":
-    SUBMISSIONS_DIR = Path("/dev/shm/submissions")
+# Dùng Path RAM ảo khi chạy trên Linux (Deploy)
+if platform.system() == "Linux": 
+    SUBMISSIONS_DIR = Path("/tmp/submissions")
 else:
     SUBMISSIONS_DIR = Path("./temp_submissions")
 
-TESTCASE_CACHE = {}
+TESTCASE_CACHE = TTLCache(maxsize=200, ttl=3600)
 
 STATUS_MAP = {
     "Accepted": "ACCEPTED",
@@ -40,7 +41,6 @@ RESULT_MAP = {
     "Compilation Error": "COMPILATION_ERROR",
 }
 
-
 async def get_testcases_from_db(problem_id):
     async with AsyncSessionLocal() as session:
         query = select(TestCases).where(TestCases.problem_id == problem_id)
@@ -51,7 +51,6 @@ async def get_testcases_from_db(problem_id):
             for tc in testcases
         ]
 
-
 async def evaluate_submission_async(lang, code, testcases, folder):
     total_time = 0
     final_status = "Accepted"
@@ -61,9 +60,7 @@ async def evaluate_submission_async(lang, code, testcases, folder):
         source_path = folder / "main.cpp"
         source_path.write_text(code, encoding="utf-8")
 
-        # NOTE: dùng ccache & -pipe
         compile_cmd = [
-            "ccache",
             "g++",
             "-O2",
             "-pipe",
@@ -101,12 +98,11 @@ async def evaluate_submission_async(lang, code, testcases, folder):
         script_path.write_text(code, encoding="utf-8")
         executable = "python3 main.py"
 
-    # đẩy test vào ram
+    # Đẩy testcases vào ổ cứng (ổ RAM tmpfs)
     for i, tc in enumerate(testcases):
         (folder / f"{i}.in").write_text(tc["input"], encoding="utf-8")
 
     if lang == "Python":
-        # IN-MEMORY PYTHON RUNNER: Biên dịch Python 1 lần, lặp n testcase trên RAM
         wrapper_code = f"""import sys, io, time, traceback
 
 with open('main.py', 'r', encoding='utf-8') as f:
@@ -143,7 +139,6 @@ for i in range(num_tcs):
         
     sys.stdout = sys.__stdout__
     
-    # FIX: Tính toán ms và đảm bảo tối thiểu là 1ms nếu code chạy quá nhanh
     time_ms = max(1, (end - start) // 1000000)
     
     with open(f"{{i}}.out", "w") as f_res: f_res.write(fout.getvalue())
@@ -155,28 +150,43 @@ for i in range(num_tcs):
         break
 """
         (folder / "wrapper.py").write_text(wrapper_code, encoding="utf-8")
-        run_script = """#!/bin/bash\nCMD="$@"\ntimeout 10s $CMD"""
-        executable = "python3 wrapper.py"
+        executable = "python3 -I -B -O wrapper.py"
 
     else:
-        # Bash loop C++
-        run_script = """#!/bin/bash
-CMD="$@"
-for f in *.in; do
-    base=$(basename $f .in)
-    start=$(date +%s%3N)
-    timeout 2s $CMD < $f > $base.out 2> $base.err
-    echo $? > $base.exit
-    end=$(date +%s%3N)
-    echo $((end-start)) > $base.time
-done
-"""
+        wrapper_code = f"""import sys, subprocess, time
 
+num_tcs = {len(testcases)}
+
+for i in range(num_tcs):
+    with open(f"{{i}}.in", "r") as fin, open(f"{{i}}.out", "w") as fout, open(f"{{i}}.err", "w") as ferr:
+        start = time.perf_counter_ns()
+        try:
+            proc = subprocess.run(['./main'], stdin=fin, stdout=fout, stderr=ferr, timeout=2)
+            exit_code = proc.returncode
+        except subprocess.TimeoutExpired:
+            exit_code = 124 
+        except Exception:
+            exit_code = 1
+            
+        end = time.perf_counter_ns()
+        
+    time_ms = max(1, (end - start) // 1000000)
+    
+    with open(f"{{i}}.time", "w") as f_time: f_time.write(str(time_ms))
+    with open(f"{{i}}.exit", "w") as f_exit: f_exit.write(str(exit_code))
+    
+    if exit_code != 0:
+        break
+"""
+        (folder / "wrapper.py").write_text(wrapper_code, encoding="utf-8")
+        executable = "python3 -I -B -O wrapper.py"
+
+    #  Sandbox 1 lần duy nhất
+    run_script = """#!/bin/bash\nCMD="$@"\ntimeout 10s $CMD"""
     (folder / "run.sh").write_text(run_script, encoding="utf-8")
     (folder / "run.sh").chmod(0o777)
 
-    # call 1 lần sanbox
-    await run_native_code_async(folder, f"./run.sh {executable}", "", timeout_secs=10)
+    await run_native_code_async(folder, f"./run.sh {executable}", "", timeout_secs=10, memory_mb=512)
 
     for i, tc in enumerate(testcases):
         out_file = folder / f"{i}.out"
@@ -197,20 +207,9 @@ done
             runtime_ms = 2000
         else:
             res_code = int(exit_file.read_text().strip())
-            actual = (
-                normalize(out_file.read_text(errors="ignore"))
-                if out_file.exists()
-                else ""
-            )
-            error_msg = (
-                err_file.read_text(errors="ignore") if err_file.exists() else None
-            )
-            runtime_ms = (
-                float(time_file.read_text().strip()) if time_file.exists() else 0.0
-            )
-
-            # lấy max time
-            total_time = max(total_time, runtime_ms)
+            actual = normalize(out_file.read_text(errors="ignore")) if out_file.exists() else ""
+            error_msg = err_file.read_text(errors="ignore") if err_file.exists() else None
+            runtime_ms = float(time_file.read_text().strip()) if time_file.exists() else 0.0
 
             if res_code == 124:
                 tc_status = "Time Limit Exceeded"
@@ -223,6 +222,8 @@ done
                 tc_status = "Failed"
                 final_status = "Wrong Answer"
 
+            total_time = max(total_time, runtime_ms)
+            
         results_log.append(
             {
                 "test_case_id": tc["id"],
@@ -238,7 +239,6 @@ done
             break
 
     return final_status, total_time, results_log
-
 
 async def process_job(job_data):
     sub_id = job_data["submission_id"]
@@ -282,10 +282,8 @@ async def process_job(job_data):
     finally:
         shutil.rmtree(folder, ignore_errors=True)
 
-
 MAX_CONCURRENT_JUDGES = max(1, os.cpu_count() or 2)
 semaphore = asyncio.Semaphore(MAX_CONCURRENT_JUDGES)
-
 
 async def process_with_limit(job):
     try:
@@ -295,17 +293,12 @@ async def process_with_limit(job):
     finally:
         semaphore.release()
 
-
 async def main():
-    print(
-        f"[Worker Judge] Running.. BATCHING MODE | CPU CORES: {MAX_CONCURRENT_JUDGES}"
-    )
+    print(f"[Worker Judge] Running.. BATCHING MODE | CPU CORES: {MAX_CONCURRENT_JUDGES}")
 
     while True:
         try:
-            # get job khi ram/cpu trống
             await semaphore.acquire()
-
             result = await redis_client.brpop("judge_queue", timeout=5)
 
             if not result:
@@ -319,12 +312,11 @@ async def main():
 
         except Exception as e:
             print(f"[Loop Error]: {e}")
-            semaphore.release()  # release slot nếu JSON error
+            semaphore.release()
             await asyncio.sleep(1)
         except KeyboardInterrupt:
             print("[Keyboard] Exit.")
             break
-
 
 if __name__ == "__main__":
     asyncio.run(main())
