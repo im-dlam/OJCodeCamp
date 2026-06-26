@@ -1,11 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useProblemDetail, useProblems } from '../../../hooks/useProblems'; 
 import { useCurrentUser } from '../../../hooks/useAuth'; 
 import { ProblemDescription } from './ProblemDescription';
 import { EditorPanel } from './EditorPanel';
 import { ConsolePanel } from './ConsolePanel';
-import { ChevronLeft, ChevronRight, List, Timer, UserCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, List, Timer, UserCircle, TerminalSquare } from 'lucide-react';
 
 import './Workspace.css';
 
@@ -129,7 +129,7 @@ export default function ProblemWorkspace() {
         
         <div className="header-left">
           <Link to="/" className="logo-link">
-            <h1 className="workspace-title">UTTCodeCamp</h1>
+            <TerminalSquare size={24} className="logo-icon" />
           </Link>
         </div>
 

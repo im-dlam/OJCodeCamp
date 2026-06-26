@@ -3,3 +3,18 @@ body {
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
 }
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, x {
+  max-width: 100vw;
+  overflow-x: hidden; 
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  text-decoration: none !important;
+  color: inherit; 
+}
