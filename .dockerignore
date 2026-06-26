@@ -1,0 +1,23 @@
+# Ignore cache and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Ignore frontend node_modules and build files (if any)
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+
+# Ignore sensitive env files
+.env
+
+# Ignore git
+.git/
+.gitignore
+
+# Ignore docs
+docs/

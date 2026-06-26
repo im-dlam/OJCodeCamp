@@ -1,0 +1,90 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: uttcodecamp_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ledinhlam
+      POSTGRES_DB: codecamp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d codecamp"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  redis:
+    image: redis:7-alpine
+    container_name: uttcodecamp_redis
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: always
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  backend:
+    image: ghcr.io/im-dlam/utt-backend-shared:v1.1
+    container_name: uttcodecamp_backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:ledinhlam@db:5432/codecamp
+      - REDIS_HOST=redis
+    ports:
+      - "0108:0108"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 0108 --workers 4
+
+  judge_worker:
+    image: ghcr.io/im-dlam/utt-backend-shared:v1.1
+    restart: always
+    depends_on:
+      backend:
+        condition: service_started
+    env_file: ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:ledinhlam@db:5432/codecamp
+      - REDIS_HOST=redis
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/submissions:/tmp/submissions
+    command: python judge/linux/main_worker.py
+    deploy:
+      replicas: 2 # 2 thread chạy song song chờ chấm bài
+
+  db_worker:
+    image: ghcr.io/im-dlam/utt-backend-shared:v1.1
+    container_name: uttcodecamp_db_worker
+    restart: always
+    depends_on:
+      backend:
+        condition: service_started
+    env_file: ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:ledinhlam@db:5432/codecamp
+      - REDIS_HOST=redis
+    command: python -m judge.linux.db_worker
+
+  frontend:
+    image: ghcr.io/im-dlam/utt-frontend:v1.1
+    container_name: uttcodecamp_frontend
+    restart: always
+    ports:
+      - "8888:80"
+    depends_on:
+      backend:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  redis_data:
