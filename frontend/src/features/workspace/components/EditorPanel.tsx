@@ -49,6 +49,9 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
             fontSize: 14,
             lineHeight: 24,
             padding: { top: 16 },
+            scrollbar: {
+              alwaysConsumeMouseWheel: false
+            },
             scrollBeyondLastLine: false,
             accessibilitySupport: 'off'
           }}
