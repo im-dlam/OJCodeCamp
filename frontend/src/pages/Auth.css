@@ -6,6 +6,8 @@
   width: 100%;
   background-color: #1a1a1a;
   font-family: system-ui, -apple-system, sans-serif;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .auth-card {
@@ -126,4 +128,14 @@
   border-radius: 6px;
   font-size: 13px;
   margin-bottom: 16px;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 24px 20px; 
+  }
+  
+  .auth-title {
+    font-size: 22px; 
+  }
 }
