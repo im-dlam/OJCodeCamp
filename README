@@ -1,2 +1,373 @@
-docker build -t judge-cpp docker/cpp
-docker build -t judge-python docker/python
+# UTT CodeCamp
+
+[![Website](https://img.shields.io/badge/Product-utt.io.vn-007EC6?style=flat&logo=googlechrome&logoColor=white)](https://utt.io.vn)
+[![Coverage](https://img.shields.io/badge/coverage-60%25-4c1?style=flat&logo=python&logoColor=white)](https://utt.io.vn)
+
+Containerized deployment guide for the UTT CodeCamp platform.
+
+---
+
+## Table of Contents
+
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Deployment Workflow](#deployment-workflow)
+- [Build Images](#build-images)
+- [Local Development](#local-development)
+- [Deploy on VPS](#deploy-on-vps)
+- [Database](#database)
+- [Monitoring & Logs](#monitoring--logs)
+- [Troubleshooting](#troubleshooting)
+- [Useful Commands](#useful-commands)
+
+---
+
+## Architecture
+
+The system is built on a containerized micro-service architecture designed for scalability and isolated execution.
+
+```text
+                 +----------------------+
+                 |       Frontend       |
+                 |        Nginx         |
+                 +----------+-----------+
+                            |
+                            v
+                 +----------------------+
+                 |      Backend API     |
+                 |        FastAPI       |
+                 +----+-----------+-----+
+                      |           |
+           +----------+           +-----------+
+           |                                  |
+           v                                  v
+    +--------------+                  +----------------+
+    |  PostgreSQL  |                  |     Redis      |
+    +--------------+                  +----------------+
+           |
+           v
+    +--------------------------+
+    | Judge Workers / DB Worker|
+    +--------------------------+
+```
+
+---
+
+## Project Structure
+
+```text
+OJCodeCamp
+├── backend/                     # FastAPI backend services
+│   ├── app/
+│   │   ├── api/                 # API router registration
+│   │   ├── authorization/       # Authentication & authorization
+│   │   ├── core/                # Core configuration, database, Redis, security
+│   │   └── modules/             # Business modules (Auth, Problems, Submissions, ...)
+│   │
+│   ├── judge/                   # Online Judge engine
+│   │   ├── linux/               # Linux judge workers
+│   │   └── windows/             # Windows judge workers
+│   │
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── frontend/                    # React + TypeScript frontend
+│   ├── public/                  # Static assets
+│   ├── src/
+│   │   ├── api/                 # API client layer
+│   │   ├── assets/              # Images & static resources
+│   │   ├── components/          # Shared UI components
+│   │   ├── features/            # Feature-based modules
+│   │   ├── hooks/               # Custom React hooks
+│   │   ├── pages/               # Application pages
+│   │   └── types/               # Shared TypeScript types
+│   │
+│   ├── Dockerfile
+│   └── nginx.conf
+│
+├── docs/
+│   └── db_uml.png               # Database schema diagram
+│
+├── docker-compose.yml           # Docker Compose configuration
+├── .dockerignore
+├── .gitignore
+└── README.md
+```
+
+### Directory Overview
+
+| Directory                  | Description                                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| **backend/**               | FastAPI application providing REST APIs, authentication, business logic, and Online Judge services. |
+| **backend/app/modules/**   | Domain-driven modules such as Authentication, Problems, Bookmarks, Discussions, and Submissions.    |
+| **backend/judge/**         | Cross-platform Online Judge implementation with isolated workers for code execution and evaluation. |
+| **frontend/**              | React + TypeScript web application used by administrators and contestants.                          |
+| **frontend/src/features/** | Feature-oriented UI modules, including the coding workspace and submission interface.               |
+| **frontend/src/api/**      | API abstraction layer for backend communication.                                                    |
+| **docs/**                  | Project documentation and architecture diagrams.                                                    |
+| **docker-compose.yml**     | Defines the complete development and production container stack.                                    |
+
+---
+
+## Prerequisites
+
+Before getting started, ensure the following software is installed:
+
+* Docker Engine 24+
+* Docker Compose v2+
+* Git
+* GitHub Personal Access Token (PAT) with `read:packages` permission
+
+Verify installation:
+
+```bash
+docker --version
+docker compose version
+```
+
+---
+
+## Deployment Workflow
+
+The platform follows a standard registry workflow for deployment:
+
+```text
+Developer
+    │
+    ├── Build Images
+    ├── Push Images
+    │
+    ▼
+GitHub Container Registry
+    │
+    ▼
+Production VPS
+    │
+    ├── docker login
+    ├── docker compose pull
+    └── docker compose up -d
+```
+
+---
+
+## Build Images
+
+### Backend
+
+Build the backend image:
+
+```bash
+docker build \
+    --pull \
+    --no-cache \
+    -t ghcr.io/im-dlam/utt-backend-shared:v1.1\
+    ./backend
+```
+
+Push to GitHub Container Registry:
+
+```bash
+docker push ghcr.io/im-dlam/utt-backend-shared:v1.1
+```
+
+### Frontend
+
+Build the frontend image:
+
+```bash
+docker build \
+    --pull \
+    --no-cache \
+    -t ghcr.io/im-dlam/utt-frontend:v1.1\
+    ./frontend
+```
+
+Push the frontend image:
+
+```bash
+docker push ghcr.io/im-dlam/utt-frontend:v1.1
+```
+
+---
+
+## Local Development
+
+Start all services locally:
+
+```bash
+docker compose up -d --force-recreate
+```
+
+Verify all containers are running:
+
+```bash
+docker ps
+```
+
+Expected containers:
+* `frontend`
+* `backend`
+* `postgres`
+* `redis`
+* `judge_worker`
+* `db_worker`
+
+---
+
+## Deploy on VPS
+
+**1. Create project directory**
+```bash
+mkdir -p backend
+```
+
+**2. Configure docker-compose**
+```bash
+nano docker-compose.yml
+```
+*(Paste the deployment configuration)*
+
+**3. Configure environment variables**
+```bash
+nano backend/.env
+```
+*(Paste the production environment variables)*
+
+**4. Authenticate with GitHub Container Registry**
+```bash
+echo "<GITHUB_TOKEN>" \
+| docker login ghcr.io \
+-u im-dlam \
+--password-stdin
+```
+
+**5. Pull latest images**
+```bash
+docker compose pull
+```
+
+**6. Start services**
+```bash
+docker compose up -d --force-recreate
+```
+
+---
+
+## Database
+
+### Start only PostgreSQL and Redis
+If you need to initialize the database before starting the backend:
+```bash
+docker compose up -d db redis
+```
+
+### Restore database
+Copy SQL backup to the database container:
+```bash
+docker cp codecamp.sql uttcodecamp_db:/tmp/codecamp.sql
+```
+
+Restore the backup:
+```bash
+docker exec -it \
+uttcodecamp_db \
+psql \
+-U postgres \
+-d codecamp \
+-f /tmp/codecamp.sql
+```
+
+### Connect to PostgreSQL
+Open an interactive session:
+```bash
+docker exec -it \
+uttcodecamp_db \
+psql \
+-U postgres \
+codecamp
+```
+
+### Database Schema
+The following diagram illustrates the database structure and relationships between entities.
+
+<p align="center">
+    <img src="./docs/db_uml.png" alt="Database Schema" width="100%">
+</p>
+
+---
+
+## Monitoring & Logs
+
+View logs to monitor service health and debug issues:
+
+* **View logs for all services:**
+  ```bash
+  docker compose logs -f
+  ```
+* **Backend logs:**
+  ```bash
+  docker compose logs -f backend
+  ```
+* **Judge worker logs:**
+  ```bash
+  docker compose logs -f judge_worker
+  ```
+* **Database worker logs:**
+  ```bash
+  docker compose logs -f db_worker
+  ```
+
+---
+
+## Troubleshooting
+
+### Image not found
+
+If you encounter an error like:
+```text
+Error response from daemon:
+failed to resolve reference ghcr.io/im-dlam/utt-backend-shared:v1
+```
+
+Rebuild the backend image on the host:
+```bash
+docker build \
+--pull \
+-t ghcr.io/im-dlam/utt-backend-shared:v1.1\
+./backend
+```
+
+Then restart the stack:
+```bash
+docker compose up -d --force-recreate
+```
+
+### Recreate Backend & Frontend
+To refresh specific services without restarting databases:
+```bash
+docker compose up \
+-d \
+--no-deps \
+--force-recreate \
+backend \
+frontend
+```
+
+### Remove unused Docker images
+To free up disk space:
+```bash
+docker image prune -a
+```
+
+---
+
+## Useful Commands
+
+| Action | Command |
+| :--- | :--- |
+| **Restart services** | `docker compose restart` |
+| **Stop all services** | `docker compose down` |
+| **Remove containers & network** | `docker compose down --remove-orphans` |
+| **Pull latest images** | `docker compose pull` |
+| **Check running containers** | `docker ps` |
