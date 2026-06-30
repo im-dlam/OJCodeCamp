@@ -158,11 +158,7 @@ Production VPS
 Build the backend image:
 
 ```bash
-docker build \
-    --pull \
-    --no-cache \
-    -t ghcr.io/im-dlam/utt-backend-shared:v1.1\
-    ./backend
+docker build --pull --no-cache -t ghcr.io/im-dlam/utt-backend-shared:v1.1 ./backend
 ```
 
 Push to GitHub Container Registry:
@@ -176,11 +172,7 @@ docker push ghcr.io/im-dlam/utt-backend-shared:v1.1
 Build the frontend image:
 
 ```bash
-docker build \
-    --pull \
-    --no-cache \
-    -t ghcr.io/im-dlam/utt-frontend:v1.1\
-    ./frontend
+docker build --pull --no-cache -t ghcr.io/im-dlam/utt-frontend:v1.1 ./frontend
 ```
 
 Push the frontend image:
